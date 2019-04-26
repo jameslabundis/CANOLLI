@@ -132,7 +132,7 @@ def clean_data(sensor, activity):
     # Normalize dataframe
     #normalized_df = (data-data.mean())/data.std()
     # Replace na vlaues with column means
-    data.fillna(data.mean(),inplace = True)
+    # data.fillna(data.mean(),inplace = True)
     return data
     
 def run_nn(data, sensor, activity):
@@ -145,8 +145,9 @@ def run_nn(data, sensor, activity):
     
     x_cols = data.columns[18:(82 + 19)]
     y = data[activity]
-    X = data[x_cols].values
-    Y = pd.get_dummies(y).values, 50
+    X = data[x_cols]
+    X = X.fillna(X.mean()).values
+    Y = pd.get_dummies(y).values
     dummy_labels = pd.get_dummies(y).columns.tolist()
     res = run_kfold(X, Y, 10, model, dummy_labels)
     # Returns average loss, accuracy,and confusion matrix of all kfolds

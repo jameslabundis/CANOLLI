@@ -128,7 +128,7 @@ def clean_data(sensor, activity):
     # Drop not encoded activities
     data = data[data[activity] != 'private/not coded']
     # Replace na vlaues with column means
-    data.fillna(data.mean(),inplace = True)
+    #data.fillna(data.mean(),inplace = True)
     return data
 
 def opt_epochs(data, sensor, activity):
@@ -141,7 +141,8 @@ def opt_epochs(data, sensor, activity):
         
     x_cols = data.columns[18:(82 + 19)]
     y = data[activity]
-    X = data[x_cols].values
+    X = data[x_cols]
+    X = X.fillna(X.mean()).values
     Y = pd.get_dummies(y).values
     dummy_labels = pd.get_dummies(y).columns.tolist()
     
