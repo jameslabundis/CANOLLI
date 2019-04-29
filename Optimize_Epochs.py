@@ -18,8 +18,8 @@ from ann_visualizer.visualize import ann_viz
 import graphviz
 from sklearn.model_selection import train_test_split
 
-sensors = ['hip', 'thigh', 'chest', 'thigh']
-activities = ['broad_activity', 'detailed_actvity']
+sensors = ['hip', 'wrist', 'chest', 'thigh']
+activities = ['broad_activity', 'detailed_activity']
 
 def run_kfold(X, Y, splits, model, class_labels):
     kf = KFold(n_splits=splits)
@@ -136,7 +136,7 @@ def opt_epochs(data, sensor, activity):
     if activity == "broad_activity":
         model = get_model_1layer_broad()
     
-    elif activity == "detailed_actvity":
+    elif activity == "detailed_activity":
          model = get_model_1layer_detailed()
         
     x_cols = data.columns[18:(82 + 19)]
@@ -172,7 +172,7 @@ def epoch_acc(X, Y, sensor, activity, model):
     plt.plot(epoch_x, test_acc, color = "red", label = "test")
     plt.legend()
     plt.title("Train/Test Accuracy vs Epoch: Single Sensor (" + sensor + ")")
-    plt.ylim((0.75,0.9))
+    plt.ylim((0.75,0.95))
     plt.ylabel('Accuracy')
     plt.xlabel('# Epochs')
     fig.savefig("Train_Test_" + sensor + "_" + activity + ".jpg")

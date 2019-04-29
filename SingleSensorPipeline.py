@@ -18,9 +18,9 @@ from ann_visualizer.visualize import ann_viz
 import graphviz
 from sklearn.model_selection import train_test_split
 
-NUM_EPOCHS = 40
+NUM_EPOCHS = 30
 
-sensors = ['hip', 'thigh', 'chest', 'thigh']
+sensors = ['hip', 'wrist', 'chest', 'thigh']
 
 def run_kfold(X, Y, splits, model, class_labels):
     kf = KFold(n_splits=splits)
@@ -153,16 +153,20 @@ def run_nn(data, sensor, activity):
     # Returns average loss, accuracy,and confusion matrix of all kfolds
     
     # Save most recent version of trained model
+    model_json = res[3].to_json()
     last_model = res[3]
     with open(sensor + "_" + activity + "_model.json", "w") as json_file:
-        json_file.write(last_model)
+        json_file.write(model_json)
     # serialize weights to HDF5
     last_model.save_weights(sensor + "_" + activity +"_model.h5")
     print("Saved model to disk")
-    
+
+    conf_mat(res, sensor, activity, dummy_labels)
+
+    prec_recall(res, sensor, activity, dummy_labels)
     return res
 
-def conf_mat(res, sensor, activity):
+def conf_mat(res, sensor, activity, dummy_labels):
     # Sum confusion matrices across all folds
     sum_cnf_matrix = np.sum(res[2], axis = 0)
     fig = plt.figure(figsize = (8,8))
@@ -178,7 +182,7 @@ def conf_mat(res, sensor, activity):
     fig.savefig("cnf_" + sensor + "_raw_" + activity  + ".jpg")
     plt.close()
     
-def prec_recall(res, sensor, activity):
+def prec_recall(res, sensor, activity, dummy_labels):
     # Precision/Recall Table
     sum_cnf_matrix = np.sum(res[2], axis = 0)
     TP = np.diag(sum_cnf_matrix)
@@ -190,7 +194,7 @@ def prec_recall(res, sensor, activity):
                             columns= dummy_labels)
     prec_recall['metric'] = ['precision', 'recall']
     prec_recall.set_index('metric')
-    prec_recall.to_csv("prec_recall_" + sensor + "_"+ activity + ".csv")
+    prec_recall.to_csv("prec_recall_" + sensor + "_"+ activity + ".csv", index = False)
     
 def main():
     # Run single sensor neural network for detailed activity labels
@@ -202,8 +206,8 @@ def main():
             data = clean_data(s, activity)
             res = run_nn(data, s, activity)
             sum_cnf_matrix = np.sum(res[2], axis = 0)
-            conf_mat(res, s, activity)
-            prec_recall(res, s, activity)
+            #conf_mat(res, s, activity)
+            #prec_recall(res, s, activity)
 
             # Save confusion matrix for all kfolds to txt file
             np.savetxt(s + "_" + activity + "_cnf_mat.txt", sum_cnf_matrix,
@@ -211,11 +215,11 @@ def main():
             # Append loss and accuracy for each sensor
             losses.append(res[0])
             accs.append(res[1])
-        # Save sensor accuracy results to csv
-        result_df = pd.DataFrame({'sensor': sensors, 
-                                  'loss': losses,
-                                  'accuracy': accs})
-        result_df.to_csv(s + "_" + activity + "_results.csv")
+            # Save sensor accuracy results to csv
+            result_df = pd.DataFrame({'sensor': sensors, 
+                                      'loss': losses,
+                                      'accuracy': accs})
+            result_df.to_csv(s + "_" + activity + "_results.csv", index = False)
     
 if __name__ == '__main__':
     main()
