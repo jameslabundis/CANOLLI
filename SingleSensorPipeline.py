@@ -216,10 +216,10 @@ def main():
             losses.append(res[0])
             accs.append(res[1])
             # Save sensor accuracy results to csv
-            result_df = pd.DataFrame({'sensor': sensors, 
+        result_df = pd.DataFrame({'sensor': sensors, 
                                       'loss': losses,
                                       'accuracy': accs})
-            result_df.to_csv(s + "_" + activity + "_results.csv", index = False)
+        result_df.to_csv(activity + "_results.csv", index = False)
     
 if __name__ == '__main__':
     main()
