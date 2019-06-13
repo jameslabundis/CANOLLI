@@ -22,7 +22,7 @@ Function for saving model weights and architecture.
 Model weights are saved to .h5 file and architecture is saved as json.
 
 Parameters:
-sensor(string): Sensor data being used for model
+sensor(string): Sensor being used for model
 activity(string): Activity type being predicted
 model(Keras model object): model to be saved to file
 
@@ -41,13 +41,14 @@ def save_model(sensor, activity, model):
     print("Saved model to disk")
 
 """
-Function for k-cross fold validation of model to determine accuracy.
+Function for k-fold cross validation of model to determine accuracy.
 
 Accuracy, loss, confusion matrices, and the model after training are stored.
 
 Parameters:
 X(ndarray): Two dimensional numpy array containing X feature data
 Y(nd.array): Two dimensional numpy array containing dummified classes
+sensor(string): Sensor being used for model
 splits(int): Number of splits for kfold cross validation
 activity(string): Activity type being predicted
 class_labels(list): List containing the original class labels
@@ -97,7 +98,8 @@ def run_kfold(X, Y, splits, sensor, activity, class_labels):
 
         # Make confusion matrix
         cnf_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred,
-                                                      labels=class_labels)
+            labels=['sit/lie', 'stand and move', 'walking', 'running',
+               'bicycling'])
 
         # Add confusion matrix for this fold to list
         cnf_tables.append(cnf_matrix)
@@ -174,7 +176,7 @@ def get_model_1layer_updated():
             layers.Dense(32, activation="relu"),
             layers.Dense(16, activation="relu"),
             layers.Dense(8, activation="relu"),
-            layers.Dense(7, activation = 'softmax')])
+            layers.Dense(5, activation = 'softmax')])
     model.compile(optimizer="sgd", loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
@@ -218,7 +220,8 @@ tuple(float, float, list) -> (accuracy, loss, cnf_tables)
 def run_nn(data, sensor, activity):
     x_cols = data.columns[18:(82 + 19)]
     y = data[activity]
-    X = data[x_cols]
+    # Standardize x columns
+    X = data[x_cols].apply(lambda x: (x - np.mean(x)) / np.std(x))
     X = X.fillna(X.mean()).values
     # One hot vectorize categories
     Y = pd.get_dummies(y).values
@@ -226,9 +229,9 @@ def run_nn(data, sensor, activity):
     # Run k-fold cross validation
     res = run_kfold(X, Y, 10, sensor, activity, dummy_labels)
     # Save confusion matrix visualizations
-    conf_mat(res, sensor, activity, dummy_labels)
+    #conf_mat(res, sensor, activity, dummy_labels)
     # Calculate precision/recall metrics, save results
-    prec_recall(res, sensor, activity, dummy_labels)
+    #prec_recall(res, sensor, activity, dummy_labels)
     return res
 
 """
@@ -307,7 +310,7 @@ None
 
 def main():
     # Run single sensor neural network for detailed activity labels
-    activity = 'final_activity'
+    activity = 'updated_final_activity'
     losses = []
     accs = []
     for s in sensors:

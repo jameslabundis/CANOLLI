@@ -19,6 +19,20 @@ sensors = ['hip', 'wrist', 'chest', 'thigh']
 L = ["hip", "thigh", "chest", "wrist"]
 combos = [",".join(map(str, comb)) for comb in combinations(L, 2)]
 
+"""
+Function for saving model weights and architecture.
+Model weights are saved to .h5 file and architecture is saved as json.
+
+Parameters:
+sensor1(string): First sensor being used for model
+sensor2(string): Second sensor being used for model
+activity(string): Activity type being predicted
+model(Keras model object): model to be saved to file
+
+Returns:
+None
+
+"""
 
 def save_model(sensor1, sensor2, activity, model):
     # Save most recent version of trained model
@@ -29,6 +43,20 @@ def save_model(sensor1, sensor2, activity, model):
     model.save_weights(sensor1 + "+" + sensor2 + "_" + activity +"_model.h5")
     print("Saved model to disk")
 
+"""
+Function for making confusion matrix visual.
+
+Parameters:
+
+cm(float): color mapping
+normalize(boolean): flag for normalizing confusion matrix
+title(string): title for graph
+cmap(plt object): color scheme for confusion matrix
+
+Returns:
+None
+
+"""
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',
@@ -60,6 +88,25 @@ def plot_confusion_matrix(cm, classes,
 
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+
+"""
+Function for k-fold cross validation of model to determine accuracy.
+
+Accuracy, loss, confusion matrices, and the model after training are stored.
+
+Parameters:
+X(ndarray): Two dimensional numpy array containing X feature data
+Y(nd.array): Two dimensional numpy array containing dummified classes
+sensor1(string): First sensor being used for model
+sensor2(string): Second sensor being used for model
+splits(int): Number of splits for kfold cross validation
+activity(string): Activity type being predicted
+class_labels(list): List containing the original class labels
+
+Returns:
+tuple(float, float, list) --> (accuracy, loss, cnf_tables)
+
+"""
 
 def run_kfold(X, Y, splits, sensor1, sensor2, activity, class_labels):
     kf = KFold(n_splits=splits)
@@ -99,7 +146,8 @@ def run_kfold(X, Y, splits, sensor1, sensor2, activity, class_labels):
 
         # Make confusion metrics
         cnf_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred,
-                                                      labels=class_labels)
+            labels=['sit/lie', 'stand and move', 'walking', 'running',
+               'bicycling'])
         
         cnf_tables.append(cnf_matrix)
 
@@ -109,33 +157,18 @@ def run_kfold(X, Y, splits, sensor1, sensor2, activity, class_labels):
     
     return (loss_r, acc_r, cnf_tables)
 
-def get_model_2layer_final():
-    # Neural Network Architecture for single sensor
-    model = tf.keras.Sequential([
-            layers.Dense(166, activation="relu", input_shape = (166,)),
-            layers.Dense(128, activation="relu"),
-            layers.Dense(64, activation="relu"),
-            layers.Dense(32, activation="relu"),
-            layers.Dense(16, activation="relu"),
-            layers.Dense(7, activation = 'softmax')])
-    # model.summary()
-    model.compile(optimizer="sgd", loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
-'''
-def get_model_2layer_detailed():
-    # Neural Network Architecture for single sensor
-    model = tf.keras.Sequential([
-            layers.Dense(166, activation="relu", input_shape = (166,)),
-            layers.Dense(128, activation="relu"),
-            layers.Dense(64, activation="relu"),
-            layers.Dense(32, activation="relu"),
-            layers.Dense(16, activation="relu"),
-            layers.Dense(10, activation = 'softmax')])
-    # model.summary()
-    model.compile(optimizer="sgd", loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
+"""
+Function for creating feed forward neural network.
 
-def get_model_2layer_broad():
+Parameters(None):
+
+Returns:
+
+keras model object
+
+"""
+
+def get_model_2layer_final():
     # Neural Network Architecture for single sensor
     model = tf.keras.Sequential([
             layers.Dense(166, activation="relu", input_shape = (166,)),
@@ -148,7 +181,7 @@ def get_model_2layer_broad():
     # model.summary()
     model.compile(optimizer="sgd", loss='categorical_crossentropy', metrics=['accuracy'])
     return model
-'''
+
 def clean_data(sensor, activity):
     data = pd.read_csv(sensor + ".csv", low_memory = False)
     # Take out unnamed columns
@@ -156,6 +189,23 @@ def clean_data(sensor, activity):
     # Drop not encoded data
     data = data[data[activity] != 'private/not coded']
     return data
+
+"""
+Function that runs training and validation of neural network.
+Saves all validation metrics locally.
+
+Parameters:
+
+df1(pandas DataFrame): data for first sensor
+df2(pandas DataFrame): data for second sensor
+sensor1(string): first sensor type
+sensor2(string): second sensor type
+activity(string): activity type
+
+Returns:
+
+tuple(float, float, list) -> (accuracy, loss, cnf_tables)
+"""
 
 def run_nn(df1, df2, sensor1, sensor2, activity):
 
@@ -173,7 +223,7 @@ def run_nn(df1, df2, sensor1, sensor2, activity):
 
     # Specify columns for X features
     x_cols = [x for x in merged.columns if x != activity]
-    X = merged[x_cols]                                                                             
+    X = merged[x_cols].apply(lambda x: (x - np.mean(x)) / np.std(x))                                                                           
     X = X.fillna(X.mean()).values 
     y = merged[activity]
     Y = pd.get_dummies(y).values
@@ -181,11 +231,27 @@ def run_nn(df1, df2, sensor1, sensor2, activity):
     # Returns average loss, accuracy,and confusion matrix of all kfolds
     res = run_kfold(X, Y, 10, sensor1, sensor2, activity, dummy_labels)
  
-    conf_mat(res, sensor1, sensor2, activity, dummy_labels)
+    #conf_mat(res, sensor1, sensor2, activity, dummy_labels)
 
-    prec_recall(res, sensor1, sensor2, activity, dummy_labels)
+    #prec_recall(res, sensor1, sensor2, activity, dummy_labels)
     return res
 
+"""
+Function that sums all confusion matrices across n folds.
+Saves two versions of the confusion matrix: normalized and
+raw counts.
+
+Parameters:
+res(tuple): tuple containing the accuracy, loss, and cnf_tables
+sensor1(string): first sensor type
+sensor2(string): second sensor type
+activity(string): activity type
+dummy_labels(list): list of strings containing original class labels
+
+Returns:
+None
+
+"""
 def conf_mat(res, sensor1, sensor2, activity, dummy_labels):
     # Sum confusion matrices across all folds
     sum_cnf_matrix = np.sum(res[2], axis = 0)
@@ -202,6 +268,22 @@ def conf_mat(res, sensor1, sensor2, activity, dummy_labels):
         title= activity + '-' + sensor1 + "+" + sensor2 + ' (Raw)')
     fig.savefig("cnf_" + sensor1 + "+" + sensor2 + "_raw_" + activity  + ".jpg")
     plt.close()
+
+"""
+Function that calculates precision and recall with given confusion matrices.
+Saves precision/recall table to csv file.
+
+Parameters:
+res(tuple): tuple containing accuracy, loss, and confusion matrices
+sensor1(string): first sensor type
+sensor2(string): second sensor type
+activty(string): activity type
+dummy_labels(list): list of strings containing original class labels
+
+Returns:
+
+None
+"""
     
 def prec_recall(res, sensor1, sensor2, activity, dummy_labels):
     # Precision/Recall Table
@@ -217,8 +299,20 @@ def prec_recall(res, sensor1, sensor2, activity, dummy_labels):
     prec_recall.set_index('metric')
     prec_recall.to_csv("prec_recall_" + sensor1 + "+" + sensor2 + "_"+ activity + ".csv",
                        index = False)
+
+"""
+Function that trains and validates a neural network for each unique two sensor
+combination.
+Saves accuracy results for all two sensor combinations to csv.
+
+Parameters(None):
+
+Returns:
+
+None
+"""
 def main():
-    activity = "final_activity"
+    activity = "updated_final_activity"
     losses = []
     accs = []
     for combo in combos:
